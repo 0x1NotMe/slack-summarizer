@@ -14,64 +14,58 @@ class Summarizer:
 
     def __init__(self, config: Dict[str, Any]):
         """
-        Initialize the summarizer.
+        Initialize the summarizer with OpenAI configuration.
 
         Args:
-            config: Application configuration dictionary.
+            config: Application configuration dictionary containing OpenAI API key.
         """
         self.logger = logging.getLogger(__name__)
-
-        # Validate OpenAI API key
-        api_key = config["openai"]["api_key"].strip()  # Remove any whitespace
-        self.logger.info(
-            f"Validating OpenAI API key (first 10 chars): {api_key[:10]}..."
-        )
+        api_key = config["openai"]["api_key"].strip()
 
         if not api_key:
             raise ValueError("OpenAI API key is empty")
-
         if not api_key.startswith("sk-"):
-            raise ValueError(
-                f"Invalid OpenAI API key format. Key should start with 'sk-'. Got: {api_key[:10]}... "
-                "Get your API key from: https://platform.openai.com/api-keys"
-            )
+            raise ValueError("OpenAI API key must start with 'sk-'")
 
         self.client = OpenAI(api_key=api_key)
+        self._test_api_connection()
 
-        # Test API connection
+    def _test_api_connection(self) -> None:
+        """Test the OpenAI API connection."""
         try:
-            # Make a minimal API call to test the key
             self.client.models.list()
-            self.logger.info("✓ OpenAI API connection successful")
+            self.logger.debug("OpenAI API connection successful")
         except Exception as e:
-            self.logger.error("✗ OpenAI API connection failed")
-            self.logger.error(str(e))
+            self.logger.error("OpenAI API connection failed: %s", str(e))
             raise
 
     def summarize_messages(
         self, messages: List[Dict[str, Any]], user_mapping: Dict[str, str] = None
     ) -> str:
         """
-        Generate a summary of Slack messages.
+        Generate a summary of Slack messages using OpenAI's chat completion API.
+
+        The summary is structured in Markdown format with sections for:
+        - Archived Tasks
+        - Conversations & Resolutions
+        - Open Issues/Items to Address
 
         Args:
             messages: List of Slack message dictionaries.
             user_mapping: Optional dictionary mapping user IDs to user names.
 
         Returns:
-            A string containing the summary.
+            A formatted Markdown string containing the channel summary.
         """
         if not messages:
             return "No messages to summarize."
 
         try:
-            # Format messages for summarization
             formatted_messages = self._format_messages(messages, user_mapping)
-
-            self.logger.info(f"Summarizing {len(messages)} messages")
+            self.logger.info("Summarizing %d messages", len(messages))
 
             response = self.client.chat.completions.create(
-                model="o1-mini",
+                model="gpt-4-0125-preview",  # Using the latest GPT-4 Turbo model
                 messages=[
                     {
                         "role": "user",
@@ -104,34 +98,39 @@ class Summarizer:
                         ),
                     }
                 ],
-                max_completion_tokens=30000,
+                max_tokens=4000,
+                temperature=0.7,
             )
 
             return response.choices[0].message.content
 
         except Exception as e:
-            self.logger.error(f"Error generating summary: {str(e)}")
+            self.logger.error("Error generating summary: %s", str(e))
             raise
 
     def _format_messages(
         self, messages: List[Dict[str, Any]], user_mapping: Dict[str, str] = None
     ) -> str:
-        """Format Slack messages into a readable conversation."""
+        """
+        Format Slack messages into a readable conversation format.
+
+        Args:
+            messages: List of Slack message dictionaries.
+            user_mapping: Optional dictionary mapping user IDs to user names.
+
+        Returns:
+            A string containing the formatted conversation.
+        """
         formatted = []
         user_mapping = user_mapping or {}
 
         for msg in messages:
-            # Convert timestamp to datetime
             ts = float(msg.get("ts", 0))
             dt = datetime.fromtimestamp(ts)
             time_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-
-            # Get user and text
             user_id = msg.get("user", "Unknown")
             user_name = user_mapping.get(user_id, user_id)
             text = msg.get("text", "")
-
-            # Format message
             formatted.append(f"[{time_str}] <{user_name}>: {text}")
 
         return "\n".join(formatted)

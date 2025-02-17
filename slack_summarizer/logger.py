@@ -11,6 +11,10 @@ def setup_logging(level: int = logging.INFO) -> None:
     """
     Set up logging configuration for the application.
 
+    IMPORTANT: Never log sensitive information such as API keys or tokens.
+    Use debug level for detailed operational logs, info for general operation,
+    warning for concerning events, and error for failures.
+
     Args:
         level: The logging level to use. Defaults to INFO.
     """
@@ -36,3 +40,6 @@ def setup_logging(level: int = logging.INFO) -> None:
     # Reduce noise from third-party libraries
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("slack_sdk").setLevel(logging.WARNING)
+
+    logger = logging.getLogger(__name__)
+    logger.debug("Logging system initialized")

@@ -4,33 +4,61 @@
 PYTHON := python3
 VENV := .venv
 
-# Create virtual environment if it doesn't exist
+# Check if we're already in a virtual environment
+INVENV := $(shell echo $$VIRTUAL_ENV)
+
+# Create virtual environment if it doesn't exist and not already in one
 $(VENV)/bin/activate:
-	$(PYTHON) -m venv $(VENV)
-	./$(VENV)/bin/pip install --upgrade pip
+	@if [ -z "$(INVENV)" ]; then \
+		$(PYTHON) -m venv $(VENV); \
+		./$(VENV)/bin/pip install --upgrade pip; \
+	fi
 
 # Install production dependencies
 install: $(VENV)/bin/activate
-	./$(VENV)/bin/pip install -e .
+	@if [ -z "$(INVENV)" ]; then \
+		./$(VENV)/bin/pip install -e .; \
+	else \
+		pip install -e .; \
+	fi
 
 # Install development dependencies
 install-dev: $(VENV)/bin/activate
-	./$(VENV)/bin/pip install -e ".[dev]"
+	@if [ -z "$(INVENV)" ]; then \
+		./$(VENV)/bin/pip install -e ".[dev]"; \
+	else \
+		pip install -e ".[dev]"; \
+	fi
 
 # Run tests
 test: install-dev
-	./$(VENV)/bin/pytest tests/ -v --cov=slack_summarizer
+	@if [ -z "$(INVENV)" ]; then \
+		./$(VENV)/bin/pytest tests/ -v --cov=slack_summarizer; \
+	else \
+		pytest tests/ -v --cov=slack_summarizer; \
+	fi
 
 # Run linting
 lint: install-dev
-	./$(VENV)/bin/flake8 slack_summarizer tests
-	./$(VENV)/bin/black --check slack_summarizer tests
-	./$(VENV)/bin/isort --check-only slack_summarizer tests
+	@if [ -z "$(INVENV)" ]; then \
+		./$(VENV)/bin/flake8 slack_summarizer tests; \
+		./$(VENV)/bin/black --check slack_summarizer tests; \
+		./$(VENV)/bin/isort --check-only slack_summarizer tests; \
+	else \
+		flake8 slack_summarizer tests; \
+		black --check slack_summarizer tests; \
+		isort --check-only slack_summarizer tests; \
+	fi
 
 # Format code
 format: install-dev
-	./$(VENV)/bin/black slack_summarizer tests
-	./$(VENV)/bin/isort slack_summarizer tests
+	@if [ -z "$(INVENV)" ]; then \
+		./$(VENV)/bin/black slack_summarizer tests; \
+		./$(VENV)/bin/isort slack_summarizer tests; \
+	else \
+		black slack_summarizer tests; \
+		isort slack_summarizer tests; \
+	fi
 
 # Clean up generated files
 clean:
@@ -45,7 +73,11 @@ clean:
 
 # Run the application
 run: install
-	./$(VENV)/bin/slack-summarizer
+	@if [ -z "$(INVENV)" ]; then \
+		./$(VENV)/bin/slack-summarizer; \
+	else \
+		slack-summarizer; \
+	fi
 
 # Create config from example if it doesn't exist
 config/config.yaml:
