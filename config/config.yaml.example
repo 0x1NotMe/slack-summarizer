@@ -1,0 +1,8 @@
+slack:
+  token: "${SLACK_TOKEN}"  # Will be replaced from environment variable
+  channels:
+    - "C0895BYT74M"  # channel-id
+openai:
+  api_key: "${OPENAI_API_KEY}"  # Will be replaced from environment variable
+summary:
+  duration_days: 14 # number of days to summarize
