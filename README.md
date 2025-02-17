@@ -17,7 +17,7 @@ A Python application that downloads Slack channel history and uses OpenAI to gen
 ## Prerequisites
 
 - Python 3.8 or higher
-- Slack App with Bot Token (see [Slack App Setup](#slack-app-setup))
+- Slack App with User Token (see [Slack App Setup](#slack-app-setup))
 - OpenAI API key
 
 ## Installation
